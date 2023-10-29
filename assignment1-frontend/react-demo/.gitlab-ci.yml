@@ -1,0 +1,31 @@
+stages:
+  - build
+  - deploy
+
+cache:
+  paths:
+    - node_modules/
+    
+variables:
+  CI: ""
+
+build:
+  stage: build
+  image: node:11
+  script:
+    - npm install --progress=false
+    - npm run build
+
+deploy:
+  stage: deploy
+  image: ruby:2.4
+  script:
+    - apt-get update -qy
+    - apt-get install -y ruby-dev
+    - gem install dpl
+    - dpl --provider=heroku --app=react-demo-ds2020 --api-key=$HEROKU_API_KEY --skip_cleanup
+  environment:
+    name: staging
+    url: https://react-demo-ds2020.herokuapp.com/
+  only:
+    - production
