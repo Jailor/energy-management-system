@@ -29,6 +29,8 @@ public class UserService {
     private String devicePrefix;
     @Value("${custom.user-secret}")
     private String customSecret;
+    @Value("${custom.monitoring-prefix}")
+    private String monitoringPrefix;
     private final UserRepository userRepository;
 
     @Autowired
@@ -52,11 +54,8 @@ public class UserService {
         return UserMapper.toUserResponseDTO(userOptional.get());
     }
 
-
-    @Transactional
-    public UUID insert(UserDTO userDTO) {
+    public User insertUserLocal(UserDTO userDTO){
         User user = UserMapper.toEntity(userDTO);
-
         List<User> userList = userRepository.findByUsername(user.getUsername());
         if(!userList.isEmpty()){
             throw new UsernameAlreadyExistsException(
@@ -67,7 +66,12 @@ public class UserService {
             );
         }
 
-        userRepository.save(user);
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public UUID insert(UserDTO userDTO) {
+        User user = insertUserLocal(userDTO);
 
         RestTemplate restTemplate = new RestTemplate();
         String url = devicePrefix + "device-api/device/user/" + user.getId();
@@ -85,10 +89,9 @@ public class UserService {
                 });
 
         if(!responseEntity.getStatusCode().is2xxSuccessful()){
-            log.warning("User with id " + user.getId() +  " could not be inserted into the other microservice");
+            log.warning("User with id " + user.getId() +  " could not be inserted into the device microservice");
             throw new ResourceNotFoundException("User with id: " + user.getId() + "in device microservice");
         }
-
 
         return user.getId();
     }
@@ -106,39 +109,19 @@ public class UserService {
         return user.getId();
     }
 
-    @Transactional
-    public UUID oldDelete(UUID id){
+    public void deleteUserLocal(UUID id){
         Optional<User> userOptional = userRepository.findById(id);
         if (userOptional.isEmpty()) {
             log.warning("User with id " + id +  " was not found in db");
             throw new ResourceNotFoundException(User.class.getSimpleName() + " with id: " + id);
         }
         userRepository.deleteById(id);
-        RestTemplate restTemplate = new RestTemplate();
-        String url = devicePrefix + "device-api/device/user-devices/" + id;
-
-        ResponseEntity<UUID> responseEntity = restTemplate.exchange(
-                url,
-                HttpMethod.DELETE,
-                null,
-                new ParameterizedTypeReference<>() {
-                });
-        UUID backId = responseEntity.getBody();
-        if(backId == null){
-            log.warning("Devices for user with id " + id +  " was not found in db");
-            throw new ResourceNotFoundException(User.class.getSimpleName() + " with id: " + id);
-        }
-        return id;
     }
 
     @Transactional
     public UUID delete(UUID id){
-        Optional<User> userOptional = userRepository.findById(id);
-        if (userOptional.isEmpty()) {
-            log.warning("User with id " + id +  " was not found in db");
-            throw new ResourceNotFoundException(User.class.getSimpleName() + " with id: " + id);
-        }
-        userRepository.deleteById(id);
+        deleteUserLocal(id);
+
         RestTemplate restTemplate = new RestTemplate();
         String url = devicePrefix + "device-api/device/user/" + id;
 
@@ -156,6 +139,7 @@ public class UserService {
             log.warning("Devices for user with id " + id +  " was not found in db");
             throw new ResourceNotFoundException(User.class.getSimpleName() + " with id: " + id);
         }
+
         return id;
     }
 

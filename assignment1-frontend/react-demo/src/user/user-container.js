@@ -17,7 +17,6 @@ import UserTable from "./components/user-table";
 import '../commons/styles/buttons-style.css'
 import DeleteConfirmationModal from '../commons/modals/delete-modal';
 import { authenticate } from '../commons/auth/auth';
-import { Redirect } from 'react-router-dom';
 
 const UserContainer = (props) => {
     const [authResult, isAdmin] = authenticate();
@@ -107,7 +106,8 @@ const UserContainer = (props) => {
     }
 
     if(!isAdmin){
-      return <Redirect to="/home" />;
+      window.location.href = "/home";
+      return (<div>Redirecting...</div>);
     }
   
     return (

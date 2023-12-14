@@ -7,9 +7,12 @@ import andrei.assignment1.dtos.UserResponseDTO;
 import andrei.assignment1.dtos.mappers.DeviceMapper;
 import andrei.assignment1.entities.Device;
 import andrei.assignment1.entities.User;
+import andrei.assignment1.indirect_com.MessageDTO;
 import andrei.assignment1.repositories.DeviceRepository;
 import andrei.assignment1.repositories.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.extern.java.Log;
+import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -32,8 +35,12 @@ public class DeviceService {
     private final UserRepository userRepository;
     @Value("${custom.user-prefix}")
     private String userPrefix;
+    @Value("${custom.monitoring-prefix}")
+    private String monitoringPrefix;
     @Value("${custom.jwt-token}")
     private String jwtToken;
+    @Autowired
+    private AmqpTemplate amqpTemplate;
 
     @Autowired
     public DeviceService(DeviceRepository deviceRepository, UserRepository userRepository) {
@@ -71,14 +78,47 @@ public class DeviceService {
         return dto;
     }
 
-    public UUID insert(DeviceDTO personDTO) {
-        Device device = DeviceMapper.toEntity(personDTO);
+    @Transactional
+    public UUID insert(DeviceDTO deviceDTO) {
+        Device device = DeviceMapper.toEntity(deviceDTO);
         device = deviceRepository.save(device);
+        // send to monitoring
+        deviceDTO.setId(device.getId());
+        String url = monitoringPrefix + "monitoring-api/device";
+
+      /*        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(jwtToken); // Set the JWT token in the Authorization header
+
+        HttpEntity<DeviceDTO> requestEntity = new HttpEntity<>(deviceDTO, headers);
+
+        ResponseEntity<UUID> responseEntity = restTemplate.exchange(
+                url,
+                HttpMethod.POST,
+                requestEntity,
+                UUID.class);
+
+        if(!responseEntity.getStatusCode().is2xxSuccessful()){
+            log.warning("Monitoring service returned " + responseEntity.getStatusCode() + " status code");
+            throw new ResourceNotFoundException("Monitoring service returned " + responseEntity.getStatusCode() + " status code");
+        }*/
+        MessageDTO messageDTO = new MessageDTO();
+        messageDTO.setAction("insert");
+        messageDTO.setObjectType("device");
+        messageDTO.setId(device.getId());
+        messageDTO.setAddress(device.getAddress());
+        messageDTO.setDescription(device.getDescription());
+        messageDTO.setMaxEnergyConsumption(device.getMaxEnergyConsumption());
+        messageDTO.setUserId(device.getUser().getId());
+        amqpTemplate.convertAndSend("update-queue", messageDTO.makeJSONString());
+
         return device.getId();
     }
 
-    public UUID update(DeviceDTO userDetailsDTO){
-        Device device = DeviceMapper.toEntity(userDetailsDTO);
+
+    @Transactional
+    public UUID update(DeviceDTO deviceDTO){
+        Device device = DeviceMapper.toEntity(deviceDTO);
         // check if device already exists
         Optional<Device> userOptional = deviceRepository.findById(device.getId());
         if (userOptional.isEmpty()) {
@@ -86,6 +126,34 @@ public class DeviceService {
             throw new ResourceNotFoundException(Device.class.getSimpleName() + " with id: " + device.getId());
         }
         device = deviceRepository.save(device);
+        // send to monitoring
+      /*        String url = monitoringPrefix + "monitoring-api/device/" + device.getId();
+
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(jwtToken); // Set the JWT token in the Authorization header
+
+        HttpEntity<DeviceDTO> requestEntity = new HttpEntity<>(deviceDTO, headers);
+
+        ResponseEntity<UUID> responseEntity = restTemplate.exchange(
+                url,
+                HttpMethod.PUT,
+                requestEntity,
+                UUID.class);
+
+        if(!responseEntity.getStatusCode().is2xxSuccessful()){
+            log.warning("Monitoring service returned " + responseEntity.getStatusCode() + " status code");
+            throw new ResourceNotFoundException("Monitoring service returned " + responseEntity.getStatusCode() + " status code");
+        }*/
+        MessageDTO messageDTO = new MessageDTO();
+        messageDTO.setAction("update");
+        messageDTO.setObjectType("device");
+        messageDTO.setId(device.getId());
+        messageDTO.setAddress(device.getAddress());
+        messageDTO.setDescription(device.getDescription());
+        messageDTO.setMaxEnergyConsumption(device.getMaxEnergyConsumption());
+        messageDTO.setUserId(device.getUser().getId());
+        amqpTemplate.convertAndSend("update-queue", messageDTO.makeJSONString());
         return device.getId();
     }
 
@@ -95,6 +163,30 @@ public class DeviceService {
             log.warning("Device with id " + id +  " was not found in db");
             throw new ResourceNotFoundException(Device.class.getSimpleName() + " with id: " + id);
         }
+        // send to monitoring
+     /*        String url = monitoringPrefix + "monitoring-api/device/" + id;
+
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(jwtToken); // Set the JWT token in the Authorization header
+
+        HttpEntity<?> requestEntity = new HttpEntity<>(headers);
+
+        ResponseEntity<UUID> responseEntity = restTemplate.exchange(
+                url,
+                HttpMethod.DELETE,
+                requestEntity,
+                UUID.class);
+
+        if(!responseEntity.getStatusCode().is2xxSuccessful()){
+            log.warning("Monitoring service returned " + responseEntity.getStatusCode() + " status code");
+            throw new ResourceNotFoundException("Monitoring service returned " + responseEntity.getStatusCode() + " status code");
+        }*/
+        MessageDTO messageDTO = new MessageDTO();
+        messageDTO.setAction("delete");
+        messageDTO.setObjectType("device");
+        messageDTO.setId(id);
+        amqpTemplate.convertAndSend("update-queue", messageDTO.makeJSONString());
         deviceRepository.deleteById(id);
         return id;
     }
@@ -149,17 +241,7 @@ public class DeviceService {
         return responseEntity.getBody();
     }
 
-    //TODO : change this
-    public UUID deleteDevicesFromUser(UUID userId) {
-        List<Device> deviceList = deviceRepository.findByUserId(userId);
-        for(Device device : deviceList){
-           //device.setUserId(null);
-           device.setUser(null);
-        }
-        deviceRepository.saveAll(deviceList);
-        return userId;
-    }
-
+    @Transactional
     public UUID deleteUser(UUID userId) {
         Optional<User> userOptional = userRepository.findById(userId);
         if (userOptional.isEmpty()) {
@@ -167,9 +249,18 @@ public class DeviceService {
             throw new ResourceNotFoundException(User.class.getSimpleName() + " with id: " + userId);
         }
         userRepository.deleteById(userId);
+
+        MessageDTO messageDTO = new MessageDTO();
+        messageDTO.setAction("delete");
+        messageDTO.setObjectType("user");
+        messageDTO.setId(userId);
+        messageDTO.setUserId(userId); // keep the json parser happy
+        amqpTemplate.convertAndSend("update-queue", messageDTO.makeJSONString());
+
         return userId;
     }
 
+    @Transactional
     public UUID insertUserId(UUID userId) {
         if(userId != null){
             Optional<User> userOptional = userRepository.findById(userId);
@@ -177,7 +268,16 @@ public class DeviceService {
             // insert he user
             User user = new User();
             user.setId(userId);
-            return userRepository.save(user).getId();
+            user = userRepository.save(user);
+
+            MessageDTO messageDTO = new MessageDTO();
+            messageDTO.setAction("insert");
+            messageDTO.setObjectType("user");
+            messageDTO.setId(userId);
+            messageDTO.setUserId(userId); // keep the json parser happy
+            amqpTemplate.convertAndSend("update-queue", messageDTO.makeJSONString());
+
+            return user.getId();
         }
         else {
             throw new ResourceNotFoundException("User function was supplied null id.");

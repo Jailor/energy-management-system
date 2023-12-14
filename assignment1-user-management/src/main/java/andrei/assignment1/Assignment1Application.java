@@ -6,6 +6,7 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 
 import java.util.TimeZone;
+import java.util.UUID;
 
 @SpringBootApplication
 public class Assignment1Application extends SpringBootServletInitializer {
@@ -15,7 +16,7 @@ public class Assignment1Application extends SpringBootServletInitializer {
 	}
 
 	public static void main(String[] args) {
-		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+		TimeZone.setDefault(TimeZone.getTimeZone("Europe/Bucharest"));
 		SpringApplication.run(Assignment1Application.class, args);
 	}
 }

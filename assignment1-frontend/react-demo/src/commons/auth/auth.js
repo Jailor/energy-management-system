@@ -2,21 +2,20 @@
 const checkAuthenticationStatus = () => {
     const jsonWebToken = sessionStorage.getItem("jsonWebToken");
     if (jsonWebToken) {
-      return true;
+      const isAdmin = sessionStorage.getItem('userRole') === 'ADMINISTRATOR';
+      return [true, isAdmin];
     } else {
-      return false;
+      return [false, false];
     }
 };
 
 
 const authenticate = () => {
-  if (!checkAuthenticationStatus()) {
+  const [isLoggedIn, isAdmin] = checkAuthenticationStatus();
+  if (!isLoggedIn) {
     window.location.href = "/";
     return [false, false];
   }
-  const userRole = sessionStorage.getItem('userRole');
-  const isAdmin = userRole === 'ADMINISTRATOR';
-  
   return [true, isAdmin];
 
   // async function fetchSecureData() {

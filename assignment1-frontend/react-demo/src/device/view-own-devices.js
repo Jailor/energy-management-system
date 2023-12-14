@@ -1,22 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { getUserDevices } from '../commons/api/device-api';
+import { getUserDevices } from '../commons/api/monitoring-api';
 import DeviceTable from './components/device-table'; // Assuming you have a device table component
 import {
     CardHeader,
     Col,
-    Row
+    Row,
+    Card,
+    Button
 } from 'reactstrap';
 import { authenticate } from '../commons/auth/auth';
 import APIResponseErrorMessage from "../commons/errorhandling/api-response-error-message";
+import { withRouter } from 'react-router-dom';
 
-const UserDevicesPage = () => {
- const authResult = authenticate();
+const UserDevicesPage = (props) => {
+  const authResult = authenticate();
 
   const [userDevices, setUserDevices] = useState([]);
   const userId = sessionStorage.getItem('id');
   const [isLoaded, setIsLoaded] = useState(false);
   const [errorStatus, setErrorStatus] = useState(0);
   const [error, setError] = useState(null);
+  const [selectedDevice, setSelectedDevice] = useState(null);
 
   useEffect(() => {
     if(!authResult) return;
@@ -48,6 +52,22 @@ const UserDevicesPage = () => {
     });
   };
 
+  const handleRowClick = (device) => {
+    setSelectedDevice(device);
+  };
+
+ 
+  const handleClick= () => {
+    if (selectedDevice) {
+      props.history.push({
+        pathname: '/device-consumption',
+        state: { device: selectedDevice }
+      });
+    }
+  };
+
+
+
   if(!authResult){
     return <div>Redirecting...</div>
   }
@@ -58,17 +78,27 @@ const UserDevicesPage = () => {
         <CardHeader>
           <strong> {sessionStorage.getItem("name")} Device Management </strong>
         </CardHeader>
+        <Card>
+          <br />
+          <Row>
+            <Col sm={{ size: '8', offset: 1 }}>
+              <Button color="info" disabled={!selectedDevice} onClick={handleClick} 
+              className="formButton"> View Device Consumption </Button>
+            </Col>
+          </Row>
+          <br />
         <Row>
             <Col sm={{ size: '8', offset: 1 }}>
-              {isLoaded && <DeviceTable tableData={userDevices}/>}
+              {isLoaded && <DeviceTable tableData={userDevices} handleRowClick={handleRowClick}/>}
               {errorStatus > 0 && <APIResponseErrorMessage
                 errorStatus={errorStatus}
                 error={error}
               />}
             </Col>
           </Row>
+          </Card>
     </div>
   );
 };
 
-export default UserDevicesPage;
+export default withRouter(UserDevicesPage);

@@ -2,7 +2,6 @@ import React from 'react';
 
 import BackgroundImg from '../commons/images/background.jpg';
 
-//import {Button, Container, Jumbotron} from 'reactstrap';
 import {Container, Jumbotron} from 'reactstrap';
 import {authenticate} from "../commons/auth/auth";
 const backgroundStyle = {

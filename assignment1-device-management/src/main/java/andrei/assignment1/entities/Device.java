@@ -4,10 +4,12 @@ package andrei.assignment1.entities;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -19,9 +21,11 @@ import java.util.UUID;
 @ToString
 @Table(name = "device_table")
 public class Device implements Serializable{
+    @Serial
     private static final long serialVersionUID = 1L;
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(generator = "custom-uuid")
+    @GenericGenerator(name = "custom-uuid", strategy = "andrei.assignment1.entities.CustomUuidGenerator")
     private UUID id;
     @NotNull
     private String description;

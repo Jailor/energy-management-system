@@ -75,12 +75,6 @@ public class DeviceController {
         return new ResponseEntity<>(dtos, HttpStatus.OK);
     }
 
-    @DeleteMapping(value = "/user-devices/{id}")
-    public ResponseEntity<UUID> deleteDevicesFromUser(@PathVariable("id") UUID userId) {
-        UUID backId = deviceService.deleteDevicesFromUser(userId);
-        return new ResponseEntity<>(backId, HttpStatus.OK);
-    }
-
     @DeleteMapping(value = "/user/{id}")
     public ResponseEntity<UUID> deleteUser(@PathVariable("id") UUID userId) {
         deviceService.deleteUser(userId);
