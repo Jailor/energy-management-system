@@ -55,6 +55,17 @@ const NavigationBar = () => {
                             <NavLink href="/user-devices">My Devices</NavLink>
                         </DropdownItem>
 
+
+                       {!isAdmin && ( 
+                        <DropdownItem>
+                            <NavLink href="/chat">Support chat</NavLink>
+                        </DropdownItem>)}
+
+                        {isAdmin && ( 
+                        <DropdownItem>
+                            <NavLink href="/admin-chat">Support chat</NavLink>
+                        </DropdownItem>)}
+
                         <DropdownItem>
                             <NavLink href="/logout"> Logout</NavLink>
                         </DropdownItem>

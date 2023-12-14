@@ -1,4 +1,4 @@
-package andrei.assignment1.controllers;
+package andrei.assignment1.security;
 
 import andrei.assignment1.dtos.security.LoginDTORequest;
 import andrei.assignment1.dtos.security.LoginDTOResponse;

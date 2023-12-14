@@ -39,7 +39,7 @@ services:
       - "8080:8080"
     depends_on:
       - postgres-user
-
+      
   # PostgreSQL service for device management
   postgres-device:
     image: postgres:latest
@@ -51,7 +51,6 @@ services:
       POSTGRES_DB: dsrl_devices
       POSTGRES_USER: dsrl-lab
       POSTGRES_PASSWORD: dsrl-lab
-   # Use a different port for the second PostgreSQL instance
       
   # Spring Boot application service for device management
   device-management-app:
@@ -72,18 +71,67 @@ services:
       - "8081:8081"  # Map to a different host port
     depends_on:
       - postgres-device
+        
+      
+  # PostgreSQL service for monitoring  management
+  postgres-monitoring:
+    image: postgres:latest
+    container_name: postgres-monitoring-container
+    networks:
+      custom_network:
+        ipv4_address: 172.16.0.6
+    environment:
+      POSTGRES_DB: dsrl-monitoring
+      POSTGRES_USER: dsrl-lab
+      POSTGRES_PASSWORD: dsrl-lab
+      
+   # Spring Boot application service for monitoring management   
+  monitoring-management-app:
+    image: my-monitoring-image:latest  
+    container_name: monitoring-management-container
+    networks:
+      custom_network:
+        ipv4_address: 172.16.0.7
+    environment:
+      DB_IP: 172.16.0.6
+      DB_PORT: 5432  
+      DB_USER: dsrl-lab
+      DB_PASSWORD: dsrl-lab
+      DB_DBNAME: dsrl-monitoring
+      USER_CONTAINER_NAME: 172.16.0.3
+      USER_CONTAINER_PORT: 8080
+    ports:
+      - "8082:8082"  # Map to a different host port
+    depends_on:
+      - postgres-monitoring
+      
+   # Spring Boot application service for monitoring management   
+  chat-app:
+    image: my-chat-image:latest  
+    container_name: chat-container
+    networks:
+      custom_network:
+        ipv4_address: 172.16.0.8
+    environment:
+      USER_CONTAINER_NAME: 172.16.0.3
+      USER_CONTAINER_PORT: 8080
+    ports:
+      - "8083:8083"  # Map to a different host port
     
   frontend:
     image: my-react-image:latest
     container_name: react-frontend-container
     networks:
       custom_network:
-        ipv4_address: 172.16.0.6
+        ipv4_address: 172.16.0.9
     environment:
       REACT_APP_HOST_USER_API: http://172.16.0.3:8080
       REACT_APP_HOST_DEVICE_API: http://172.16.0.5:8081
+      REACT_APP_HOST_MONITORING: http://172.16.0.7:8082
+      REACT_APP_HOST_CHAT: http://172.16.0.7:8083
     ports:
       - "80:80"
     depends_on:
       - user-management-app
       - device-management-app
+      - monitoring-management-app

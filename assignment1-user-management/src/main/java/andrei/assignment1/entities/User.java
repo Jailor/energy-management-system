@@ -3,8 +3,10 @@ package andrei.assignment1.entities;
 import andrei.assignment1.entities.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.GenericGenerator;
 
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -16,9 +18,11 @@ import java.util.UUID;
 @ToString
 @Table(name = "user_table")
 public class User implements Serializable{
+    @Serial
     private static final long serialVersionUID = 1L;
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @GeneratedValue(generator = "custom-uuid")
+    @GenericGenerator(name = "custom-uuid", strategy = "andrei.assignment1.entities.CustomUuidGenerator")
     private UUID id;
     @Column(name = "username1", nullable = false, unique = true)
     private String username;

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Form, FormGroup, Label, Input, Button, Alert } from 'reactstrap';
 import * as API_USERS from "../api/user-api";
+
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -35,7 +36,8 @@ const Login = () => {
           sessionStorage.setItem("name", loginResponse.name);
           sessionStorage.setItem("id", loginResponse.id);
           sessionStorage.setItem("jsonWebToken", loginResponse.jsonWebToken);
-
+          const isAdmin = loginResponse.userRole === 'ADMINISTRATOR';
+          sessionStorage.setItem('totalMessages', JSON.stringify(isAdmin ? {} : []));
           window.location.href = "/home";
         }
         else{
@@ -66,7 +68,6 @@ const Login = () => {
   function onDismiss() {
     setShow(false);
   }
-
 
   return (
     <Container>

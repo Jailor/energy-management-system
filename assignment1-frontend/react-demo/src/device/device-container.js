@@ -17,7 +17,6 @@ import DeviceTable from "./components/device-table";
 import '../commons/styles/buttons-style.css'
 import DeleteConfirmationModal from '../commons/modals/delete-modal';
 import { authenticate } from '../commons/auth/auth';
-import { Redirect } from 'react-router-dom';
 
 const DeviceContainer = (props) => {
     const [authResult, isAdmin] = authenticate();
@@ -114,7 +113,8 @@ const DeviceContainer = (props) => {
     if(!authResult) return (<div>Redirecting...</div>)
 
     if(!isAdmin){
-      return <Redirect to="/home" />;
+      window.location.href = "/home";
+      return (<div>Redirecting...</div>);
     }
   
     return (
