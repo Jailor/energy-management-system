@@ -1,0 +1,59 @@
+stages:
+  - test
+  - checkstyle
+  - build
+  - deploy
+
+test:
+    stage: test
+    image: maven:3.8.4-openjdk-17-slim
+    script:
+    - echo "Test DEMO app"
+    - mvn test && mvn jacoco:report
+    - cat target/site/jacoco/index.html | grep -o '.*'
+    coverage: "/Total.*?([0-9]{1,3})%/"
+
+
+checkstyle:
+    stage: checkstyle
+    image: maven:3.8.4-openjdk-17-slim
+    script:
+    - echo "Checkstyle DEMO app"
+    - mvn checkstyle:check
+
+build:
+  image: docker:latest
+  services:
+    - docker:dind
+  stage: build
+  script:
+    - docker login -u $CI_DEPLOY_USER -p $CI_DEPLOY_PASSWORD $CI_REGISTRY
+    - docker pull $CI_REGISTRY_IMAGE:latest || true
+    - docker build --cache-from $CI_REGISTRY_IMAGE:latest --tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA --tag $CI_REGISTRY_IMAGE:latest .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE:latest
+    - docker login -u $AZURE_REGISTRY_USERNAME -p $AZURE_REGISTRY_PASSWORD $AZURE_REGISTRY_NAME.azurecr.io
+    - docker tag $CI_REGISTRY_IMAGE:latest $AZURE_REGISTRY_NAME.azurecr.io/$AZURE_WEBAPP_NAME:latest
+    - docker push $AZURE_REGISTRY_NAME.azurecr.io/$AZURE_WEBAPP_NAME:latest
+
+deploy:
+  image: mcr.microsoft.com/azure-cli
+  services:
+    - docker:dind
+  stage: deploy
+  script:
+    - az login --service-principal -u $AZURE_APP_ID -p $AZURE_PASSWORD --tenant $AZURE_TENANT_ID
+    - |
+      if az container show --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_NAME --query "containers[0].instanceView.currentState.state" --output tsv 2>/dev/null; then
+        echo "Container exists. Stopping and removing..."
+        az container delete --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_NAME --yes
+      else
+        echo "Container does not exist. Proceeding to create a new one."
+      fi
+    - az container create --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_NAME --image $AZURE_REGISTRY_NAME.azurecr.io/$AZURE_WEBAPP_NAME:latest --registry-login-server $AZURE_REGISTRY_NAME.azurecr.io --registry-username $AZURE_REGISTRY_USERNAME --registry-password $AZURE_REGISTRY_PASSWORD --ports 8080 --dns-name-label mycustomdnsandreiuser --environment-variables DB_IP=test-postgres-ds.postgres.database.azure.com DB_PORT=5432 DB_USER=admintest DB_PASSWORD=123456789aA DB_DBNAME=dsrl_users DEVICE_CONTAINER_NAME="mycustomdnsandreidevice.westeurope.azurecontainer.io" DEVICE_CONTAINER_PORT=8081
+    - az container start --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_NAME
+
+    
+
+
+
